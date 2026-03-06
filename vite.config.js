@@ -9,10 +9,15 @@ export default defineConfig({
         '@walletconnect/ethereum-provider',
         '@walletconnect/sign-client',
         '@walletconnect/universal-provider',
+        '@walletconnect/modal',
         '@web3modal/base',
         '@web3modal/core',
-        '@web3modal/ui'
+        '@web3modal/ui',
+        '@web3modal/scaffold-utils'
       ]
     }
+  },
+  optimizeDeps: {
+    include: ['@walletconnect/ethereum-provider', '@web3modal/wagmi']
   }
 })

