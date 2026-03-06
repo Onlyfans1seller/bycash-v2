@@ -87,7 +87,7 @@ function App() {
 
         {!isConnected && !isPhantomInApp && (
           <div className="max-w-md mx-auto">
-            <Web3Button /> {/* Красивая кнопка от Web3Modal — открывает модал с кошельками */}
+           {/* <w3mButton /> */} {/* Красивая кнопка от Web3Modal — открывает модал с кошельками */}
             <button
               onClick={openPhantomBrowser}
               className="mt-6 w-full bg-purple-600 hover:bg-purple-700 py-4 rounded-full text-xl font-bold"
