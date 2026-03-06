@@ -5,7 +5,14 @@ export default defineConfig({
   plugins: [react()],
   build: {
     rollupOptions: {
-      external: ['@walletconnect/ethereum-provider', '@walletconnect/sign-client', '@walletconnect/universal-provider']
+      external: [
+        '@walletconnect/ethereum-provider',
+        '@walletconnect/sign-client',
+        '@walletconnect/universal-provider',
+        '@web3modal/base',
+        '@web3modal/core',
+        '@web3modal/ui'
+      ]
     }
   }
 })
