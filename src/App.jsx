@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAccount, useBalance, useSendTransaction } from 'wagmi'
-// import { Web3Button } from '@web3modal/wagmi/react';
+// import {/* <Web3Button /> */} from "@web3modal/wagmi/react";
 import { parseEther } from 'viem'
 import * as solanaWeb3 from '@solana/web3.js'
 
